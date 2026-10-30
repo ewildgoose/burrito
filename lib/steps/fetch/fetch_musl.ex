@@ -15,11 +15,19 @@ defmodule Burrito.Steps.Fetch.FetchMusl do
 
   @behaviour Step
 
+  # Every Linux ERTS that is not the build machine's own is a
+  # beam-machine-universal build linked against musl, with the runtime
+  # file below as its ELF interpreter: the precompiled one Burrito
+  # picks, and a `custom_erts` URL or tarball alike. Without the file
+  # the executable fails at its first exec of erlexec with
+  # FileNotFound (ENOENT from the kernel for the missing interpreter),
+  # and the wrapper does not compile when the file is referenced.
   @impl Step
   def execute(
-        %Context{target: %Target{os: :linux, cpu: arch, erts_source: {:precompiled, _}} = _target} =
+        %Context{target: %Target{os: :linux, cpu: arch, erts_source: {kind, _}} = _target} =
           context
-      ) do
+      )
+      when kind != :runtime do
     Log.info(:step, "Fetching musl libc runtime binary for Linux...")
 
     so_url = fetch_musl_runtime(arch) |> to_string()
